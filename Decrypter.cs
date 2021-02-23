@@ -11,7 +11,7 @@ namespace WebGallery.FileServer
 {
     public static class Decrypter
     {
-        public static async Task<MemoryStream> Decrypt(string filePath, string certName, string password)
+        public static async Task<MemoryStream> Decrypt(string filePath, string certName, string password = "")
         {
             //Read the file in memory so we can overwrite the source with it's original file.
             //We also need it in memory so we can extract the key.

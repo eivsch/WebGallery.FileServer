@@ -8,7 +8,7 @@ namespace WebGallery.FileServer
 {
     public static class Encrypter
     {
-        public static async Task Encrypt(string filePath, string certName, string password)
+        public static async Task Encrypt(string filePath, string certName, string password = "")
         {
             //We're using AES encryption to create my key.
             Aes aesKey = Aes.Create();
