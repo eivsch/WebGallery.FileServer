@@ -52,7 +52,7 @@ namespace WebGallery.FileServer.Controllers
             
             var path = Path.Combine(_rootPath, appPath);
 
-            using var decryptedFileStream = await Decrypter.Decrypt(path, "/home/eivind/WebGallerySettings.pfx");
+            using var decryptedFileStream = await Decrypter.Decrypt(path, "/Certificates/WebGallerySettings.pfx");
             var fileBytes = decryptedFileStream.ToArray();
 
             return new FileContentResult(fileBytes, "video/mp4");
@@ -97,7 +97,7 @@ namespace WebGallery.FileServer.Controllers
                     };
                 }
 
-                await Encrypter.Encrypt(filePath, "/home/eivind/WebGallerySettings.pfx");
+                await Encrypter.Encrypt(filePath, "/Certificates/WebGallerySettings.pfx");
             }
 
             return Ok(response);
