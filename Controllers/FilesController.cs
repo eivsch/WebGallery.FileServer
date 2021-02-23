@@ -13,17 +13,12 @@ namespace WebGallery.FileServer.Controllers
     {
         private readonly ILogger<FilesController> _logger;
         private readonly string _rootPath;
+        private string certPath = "Certificates/WebGallerySettings.pfx";
 
         public FilesController(ILogger<FilesController> logger, IConfiguration configuration)
         {
             _logger = logger;
             _rootPath = configuration.GetValue("ConnectionStrings:FileSystemRoot", "");
-        }
-
-        [HttpGet("ping")]
-        public IActionResult Ping()
-        {
-            return Ok("pong");
         }
 
         [HttpGet("image")]
@@ -36,7 +31,7 @@ namespace WebGallery.FileServer.Controllers
 
             // var path = Path.Combine(_rootPath, "testalbum/tst/Upload.jpg");
 
-            using var decryptedFileStream = await Decrypter.Decrypt(path, "/Certificates/WebGallerySettings.pfx");
+            using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
             var fileBytes = decryptedFileStream.ToArray();
 
             //System.IO.File.WriteAllBytes("/home/eivind/out-srv.jpg", fileBytes);
@@ -52,7 +47,7 @@ namespace WebGallery.FileServer.Controllers
             
             var path = Path.Combine(_rootPath, appPath);
 
-            using var decryptedFileStream = await Decrypter.Decrypt(path, "/Certificates/WebGallerySettings.pfx");
+            using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
             var fileBytes = decryptedFileStream.ToArray();
 
             return new FileContentResult(fileBytes, "video/mp4");
@@ -97,7 +92,7 @@ namespace WebGallery.FileServer.Controllers
                     };
                 }
 
-                await Encrypter.Encrypt(filePath, "/Certificates/WebGallerySettings.pfx");
+                await Encrypter.Encrypt(filePath, certPath);
             }
 
             return Ok(response);
