@@ -13,12 +13,15 @@ namespace WebGallery.FileServer.Controllers
     {
         private readonly ILogger<FilesController> _logger;
         private readonly string _rootPath;
+
+        private bool _useEncryption;
         private string certPath = "Certificates/WebGallerySettings.pfx";
 
         public FilesController(ILogger<FilesController> logger, IConfiguration configuration)
         {
             _logger = logger;
             _rootPath = configuration.GetValue("ConnectionStrings:FileSystemRoot", "");
+            _useEncryption = configuration.GetValue("UseEncryption", false);
         }
 
         [HttpGet("image")]
@@ -31,8 +34,16 @@ namespace WebGallery.FileServer.Controllers
 
             // var path = Path.Combine(_rootPath, "testalbum/tst/Upload.jpg");
 
-            using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
-            var fileBytes = decryptedFileStream.ToArray();
+            byte[] fileBytes;
+            if (_useEncryption)
+            {
+                using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
+                fileBytes = decryptedFileStream.ToArray();
+            }
+            else
+            {
+                fileBytes = System.IO.File.ReadAllBytes(path);
+            }
 
             //System.IO.File.WriteAllBytes("/home/eivind/out-srv.jpg", fileBytes);
             
@@ -47,8 +58,16 @@ namespace WebGallery.FileServer.Controllers
             
             var path = Path.Combine(_rootPath, appPath);
 
-            using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
-            var fileBytes = decryptedFileStream.ToArray();
+            byte[] fileBytes;
+            if (_useEncryption)
+            {
+                using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
+                fileBytes = decryptedFileStream.ToArray();
+            }
+            else
+            {
+                fileBytes = System.IO.File.ReadAllBytes(path);
+            }
 
             return new FileContentResult(fileBytes, "video/mp4");
         }
@@ -92,7 +111,8 @@ namespace WebGallery.FileServer.Controllers
                     };
                 }
 
-                await Encrypter.Encrypt(filePath, certPath);
+                if (_useEncryption)
+                    await Encrypter.Encrypt(filePath, certPath);
             }
 
             return Ok(response);
