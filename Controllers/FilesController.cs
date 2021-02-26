@@ -29,7 +29,8 @@ namespace WebGallery.FileServer.Controllers
         {
             var base64EncodedBytes = System.Convert.FromBase64String(file);
             var appPath = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
-            
+            appPath = UnifyAppPath(appPath);
+
             var path = Path.Combine(_rootPath, appPath);
 
             // var path = Path.Combine(_rootPath, "testalbum/tst/Upload.jpg");
@@ -55,6 +56,7 @@ namespace WebGallery.FileServer.Controllers
         {
             var base64EncodedBytes = System.Convert.FromBase64String(file);
             var appPath = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            appPath = UnifyAppPath(appPath);
             
             var path = Path.Combine(_rootPath, appPath);
 
@@ -116,6 +118,16 @@ namespace WebGallery.FileServer.Controllers
             }
 
             return Ok(response);
+        }
+
+        private string UnifyAppPath(string appPath)
+        {
+            if (Path.DirectorySeparatorChar == '/')
+                appPath = appPath.Replace('\\', '/');
+            else
+                appPath = appPath.Replace('/', '\\');
+
+            return appPath;
         }
     }
 }
