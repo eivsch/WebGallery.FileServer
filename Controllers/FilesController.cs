@@ -81,7 +81,7 @@ namespace WebGallery.FileServer.Controllers
 
             foreach (var file in Request.Form.Files)
             {
-                string filename = file.FileName;
+                string filename = Path.GetFileName(file.FileName);
                 string folder = file.Name;
 
                 var dir = Path.Combine(_rootPath, folder);

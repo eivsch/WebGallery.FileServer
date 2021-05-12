@@ -19,9 +19,9 @@
     },
     "WebGallery.FileServer": {
       "commandName": "Project",
-      "launchBrowser": true,
-      "launchUrl": "weatherforecast",
-      "applicationUrl": "http://localhost:5051",
+      //"launchBrowser": true,
+      //"launchUrl": "ping",
+      "applicationUrl": "http://localhost:5052",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
