@@ -20,20 +20,21 @@ namespace WebGallery.FileServer.Controllers
         public FilesController(ILogger<FilesController> logger, IConfiguration configuration)
         {
             _logger = logger;
-            _rootPath = configuration.GetValue("ConnectionStrings:FileSystemRoot", "");
             _useEncryption = configuration.GetValue("UseEncryption", false);
+
+            _rootPath = configuration.GetValue("ConnectionStrings:FileSystemRoot", "");
         }
 
         [HttpGet("image")]
         public async Task<IActionResult> DownloadImage(string file)
         {
+            var userRootPath = ResolveUserRootPath();
+
             var base64EncodedBytes = System.Convert.FromBase64String(file);
             var appPath = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
             appPath = UnifyAppPath(appPath);
 
-            var path = Path.Combine(_rootPath, appPath);
-
-            // var path = Path.Combine(_rootPath, "testalbum/tst/Upload.jpg");
+            var path = Path.Combine(userRootPath, appPath);
 
             byte[] fileBytes;
             if (_useEncryption)
@@ -54,11 +55,13 @@ namespace WebGallery.FileServer.Controllers
         [HttpGet("video")]
         public async Task<IActionResult> DownloadVideo(string file)
         {
+            var userRootPath = ResolveUserRootPath();
+
             var base64EncodedBytes = System.Convert.FromBase64String(file);
             var appPath = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
             appPath = UnifyAppPath(appPath);
             
-            var path = Path.Combine(_rootPath, appPath);
+            var path = Path.Combine(userRootPath, appPath);
 
             byte[] fileBytes;
             if (_useEncryption)
@@ -77,6 +80,7 @@ namespace WebGallery.FileServer.Controllers
         [HttpPost]
         public async Task<IActionResult> Upload()
         {
+            var userRootPath = ResolveUserRootPath();
             FileUploadResponse response = null;
 
             foreach (var file in Request.Form.Files)
@@ -84,7 +88,7 @@ namespace WebGallery.FileServer.Controllers
                 string filename = Path.GetFileName(file.FileName);
                 string folder = file.Name;
 
-                var dir = Path.Combine(_rootPath, folder);
+                var dir = Path.Combine(userRootPath, folder);
                 if (!Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
 
@@ -128,6 +132,18 @@ namespace WebGallery.FileServer.Controllers
                 appPath = appPath.Replace('/', '\\');
 
             return appPath;
+        }
+
+        private string ResolveUserRootPath()
+        {
+            if (Request.Headers.ContainsKey("Gallery-User"))
+            {
+                var userId = Request.Headers["Gallery-User"];
+
+                return Path.Combine(_rootPath, userId);
+            }
+
+            return _rootPath;
         }
     }
 }
