@@ -15,8 +15,8 @@ namespace WebGallery.FileServer.Controllers
         [HttpGet]
         public IActionResult Ping()
         {
-            var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2("Certificates/WebGallerySettings.pfx");
-            var privateKey = cert.GetRSAPrivateKey();
+            //var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2("Certificates/WebGallerySettings.pfx");
+            //var privateKey = cert.GetRSAPrivateKey();
 
             return Ok("pong - cert OK");
         }
