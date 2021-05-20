@@ -21,7 +21,7 @@ namespace WebGallery.FileServer
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>()
-                    .UseUrls("http://0.0.0.0:5052")
+                    //.UseUrls("https://0.0.0.0:5052")
                     ;
                 });
     }

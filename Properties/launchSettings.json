@@ -21,7 +21,7 @@
       "commandName": "Project",
       //"launchBrowser": true,
       //"launchUrl": "ping",
-      "applicationUrl": "http://localhost:5052",
+      //"applicationUrl": "https://localhost:5052",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

@@ -12,14 +12,26 @@ namespace WebGallery.FileServer.Controllers
     [Route("[controller]")]
     public class PingController : ControllerBase
     {
+        private string certPath;
+        
+        public PingController(IConfiguration configuration)
+        {
+            certPath = configuration.GetValue("EncryptionCertificate", "");
+        }
+
         [HttpGet]
         public IActionResult Ping()
         {
-            var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2("Certificates/WebGallerySettings.pfx");
+            return Ok("pong");
+        }
+
+        [HttpGet("cert")]
+        public IActionResult PingCert()
+        {
+            var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(certPath);
             var privateKey = cert.GetRSAPrivateKey();
 
             return Ok("pong - cert OK");
         }
-        
     }
 }

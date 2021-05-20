@@ -15,9 +15,13 @@ namespace WebGallery.FileServer
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public IWebHostEnvironment HostingEnvironment { get; }
+        private bool IsDevelopmentEnv => HostingEnvironment?.EnvironmentName?.ToUpper() == "DEVELOPMENT";
+
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
+            HostingEnvironment = env;
         }
 
         public IConfiguration Configuration { get; }
@@ -26,6 +30,9 @@ namespace WebGallery.FileServer
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+
+            if (!IsDevelopmentEnv)
+                services.AddApplicationInsightsTelemetry();     // Should automatically get the key from configuration
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
