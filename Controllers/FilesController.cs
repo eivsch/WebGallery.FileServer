@@ -13,9 +13,9 @@ namespace WebGallery.FileServer.Controllers
     {
         private readonly ILogger<FilesController> _logger;
         private readonly string _rootPath;
+        private readonly string _certPath;
 
         private bool _useEncryption;
-        private string certPath = "Certificates/WebGallerySettings.pfx";
 
         public FilesController(ILogger<FilesController> logger, IConfiguration configuration)
         {
@@ -23,6 +23,7 @@ namespace WebGallery.FileServer.Controllers
             _useEncryption = configuration.GetValue("UseEncryption", false);
 
             _rootPath = configuration.GetValue("ConnectionStrings:FileSystemRoot", "");
+            _certPath = configuration.GetValue("EncryptionCertificate", "");
         }
 
         [HttpGet("image")]
@@ -39,7 +40,7 @@ namespace WebGallery.FileServer.Controllers
             byte[] fileBytes;
             if (_useEncryption)
             {
-                using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
+                using var decryptedFileStream = await Decrypter.Decrypt(path, _certPath);
                 fileBytes = decryptedFileStream.ToArray();
             }
             else
@@ -66,7 +67,7 @@ namespace WebGallery.FileServer.Controllers
             byte[] fileBytes;
             if (_useEncryption)
             {
-                using var decryptedFileStream = await Decrypter.Decrypt(path, certPath);
+                using var decryptedFileStream = await Decrypter.Decrypt(path, _certPath);
                 fileBytes = decryptedFileStream.ToArray();
             }
             else
@@ -118,7 +119,7 @@ namespace WebGallery.FileServer.Controllers
                 }
 
                 if (_useEncryption)
-                    await Encrypter.Encrypt(filePath, certPath);
+                    await Encrypter.Encrypt(filePath, _certPath);
             }
 
             return Ok(response);
