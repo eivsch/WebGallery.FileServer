@@ -78,6 +78,7 @@ namespace WebGallery.FileServer.Controllers
             return new FileContentResult(fileBytes, "video/mp4");
         }
 
+        [DisableRequestSizeLimit]
         [HttpPost]
         public async Task<IActionResult> Upload()
         {
