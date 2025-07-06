@@ -186,6 +186,50 @@ namespace WebGallery.FileServer.Controllers
             return Ok(new { DeletedPath = deletedFilePath });
         }
 
+        public class ThumbnailRequest
+        {
+            public string File { get; set; }
+            public string SeekTime { get; set; } = "00:00:01";
+        }
+
+        [HttpPost("generate-thumbnail")]
+        public async Task<IActionResult> GenerateThumbnail([FromBody] ThumbnailRequest request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.File))
+                return BadRequest("Missing file parameter.");
+
+            var userRootPath = ResolveUserRootPath();
+
+            var base64EncodedBytes = Convert.FromBase64String(request.File);
+            var appPath = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            appPath = UnifyAppPath(appPath);
+
+            var filePath = Path.Combine(userRootPath, appPath);
+
+            if (!System.IO.File.Exists(filePath))
+                return NotFound("File does not exist.");
+
+            var thumbnailDir = Path.Combine(Path.GetDirectoryName(filePath), "thumbs");
+            if (!Directory.Exists(thumbnailDir))
+                Directory.CreateDirectory(thumbnailDir);
+
+            var thumbnailPath = Path.Combine(
+                thumbnailDir,
+                $"{Path.GetFileNameWithoutExtension(filePath)}.jpg"
+            );
+
+            try
+            {
+                await GenerateVideoThumbnailAsync(filePath, thumbnailPath, request.SeekTime ?? "00:00:01");
+                return Ok(new { ThumbnailPath = thumbnailPath });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate video thumbnail for {FilePath} at {SeekTime}", filePath, request.SeekTime);
+                return StatusCode(500, "Failed to generate thumbnail.");
+            }
+        }
+
         private string UnifyAppPath(string appPath)
         {
             if (Path.DirectorySeparatorChar == '/')
@@ -208,11 +252,11 @@ namespace WebGallery.FileServer.Controllers
             return _rootPath;
         }
         
-        private async Task<string> GenerateVideoThumbnailAsync(string videoPath, string thumbnailPath)
+        private async Task<string> GenerateVideoThumbnailAsync(string videoPath, string thumbnailPath, string seekTime = "00:00:01")
         {
             // Example: ffmpeg -y -ss 00:00:01 -i input.mp4 -frames:v 1 -q:v 2 output.jpg
             // -y is to overwrite output file if it exists
-            var args = $"-y -ss 00:00:01 -i \"{videoPath}\" -frames:v 1 -q:v 2 \"{thumbnailPath}\"";
+            var args = $"-y -ss {seekTime} -i \"{videoPath}\" -frames:v 1 -q:v 2 \"{thumbnailPath}\"";
 
             var process = new Process
             {
