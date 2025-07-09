@@ -189,7 +189,7 @@ namespace WebGallery.FileServer.Controllers
         public class ThumbnailRequest
         {
             public string File { get; set; }
-            public string SeekTime { get; set; } = "00:00:01";
+            public string SeekTime { get; set; } = "00:00:01.000";
         }
 
         [HttpPost("generate-thumbnail")]
@@ -230,6 +230,55 @@ namespace WebGallery.FileServer.Controllers
             }
         }
 
+        [HttpPost("generate-video-image")]
+        public async Task<IActionResult> GenerateVideoImage([FromBody] ThumbnailRequest request)
+        {
+            if (request == null || string.IsNullOrEmpty(request.File))
+                return BadRequest("Missing file parameter.");
+
+            var userRootPath = ResolveUserRootPath();
+
+            var base64EncodedBytes = Convert.FromBase64String(request.File);
+            var appPath = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            appPath = UnifyAppPath(appPath);
+
+            var filePath = Path.Combine(userRootPath, appPath);
+
+            if (!System.IO.File.Exists(filePath))
+                return NotFound("File does not exist.");
+
+            var videoDirectory = Path.GetDirectoryName(filePath);
+            var videoDirectoryName = new DirectoryInfo(videoDirectory).Name;
+
+            // Place the images directory directly under the user folder
+            var videoImagesDir = Path.Combine(userRootPath, $"{videoDirectoryName}_video_images");
+            if (!Directory.Exists(videoImagesDir))
+                Directory.CreateDirectory(videoImagesDir);
+
+            var baseName = Path.GetFileNameWithoutExtension(filePath);
+            var extension = ".jpg";
+            string seekTimeStr = request.SeekTime.Replace(":", "");
+            string imagePath = Path.Combine(videoImagesDir, $"{baseName}_{seekTimeStr}{extension}");
+
+            try
+            {
+                await GenerateVideoThumbnailAsync(filePath, imagePath, request.SeekTime ?? "00:00:01");
+                var fileInfo = new FileInfo(imagePath);
+
+                return Ok(new
+                {
+                    FileName = Path.GetFileName(imagePath),
+                    FilePathFull = imagePath,
+                    FileSize = fileInfo.Length
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate video image for {FilePath} at {SeekTime}", filePath, request.SeekTime);
+                return StatusCode(500, "Failed to generate video image.");
+            }
+        }
+
         private string UnifyAppPath(string appPath)
         {
             if (Path.DirectorySeparatorChar == '/')
@@ -252,7 +301,7 @@ namespace WebGallery.FileServer.Controllers
             return _rootPath;
         }
         
-        private async Task<string> GenerateVideoThumbnailAsync(string videoPath, string thumbnailPath, string seekTime = "00:00:01")
+        private async Task<string> GenerateVideoThumbnailAsync(string videoPath, string thumbnailPath, string seekTime = "00:00:01.000")
         {
             // Example: ffmpeg -y -ss 00:00:01 -i input.mp4 -frames:v 1 -q:v 2 output.jpg
             // -y is to overwrite output file if it exists
