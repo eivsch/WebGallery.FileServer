@@ -106,11 +106,7 @@ namespace WebGallery.FileServer.Controllers
                 // Override 'filePath' and 'filename' if a file with the same name already exists
                 if (System.IO.File.Exists(filePath))
                 {
-                    var filenameParts = filename.Split('.');
-                    string namePart = filenameParts[0] + "_1";
-                    string fileExtensionPart = filenameParts[1];
-
-                    filename = string.Join('.', namePart, fileExtensionPart);
+                    filename = HandleExistingFilename(filename);
                     filePath = Path.Combine(dir, filename);
                 }
 
@@ -184,6 +180,53 @@ namespace WebGallery.FileServer.Controllers
             System.IO.File.Move(filePath, deletedFilePath);
 
             return Ok(new { DeletedPath = deletedFilePath });
+        }
+
+        public class RenameFolderRequest
+        {
+            public string OldName { get; set; }
+            public string NewName { get; set; }
+        }
+
+        [HttpPost("rename-folder")]
+        public IActionResult Rename([FromBody] RenameFolderRequest request)
+        {
+            string userRootPath = ResolveUserRootPath();
+            string oldPath = Path.Combine(userRootPath, request.OldName);
+            string newPath = Path.Combine(userRootPath, request.NewName);
+            Directory.Move(oldPath, newPath);
+
+            return Ok();
+        }
+
+        public class MergeFoldersRequest
+        {
+            public string SourceFolder { get; set; }
+            public string TargetFolder { get; set; }
+        }
+
+        [HttpPost("merge-folders")]
+        public IActionResult MergeFolders(MergeFoldersRequest request)
+        {
+            string userRootPath = ResolveUserRootPath();
+            string sourceFolder = Path.Combine(userRootPath, request.SourceFolder);
+            string targetFolder = Path.Combine(userRootPath, request.TargetFolder);
+
+            if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
+            foreach (string sourceFile in Directory.EnumerateFiles(sourceFolder))
+            {
+                string filename = Path.GetFileName(sourceFile);
+                string destinationFile = Path.Combine(targetFolder, filename);
+                if (System.IO.File.Exists(destinationFile))
+                {
+                    filename = HandleExistingFilename(filename);
+                    destinationFile = Path.Combine(targetFolder, filename);
+                }
+
+                System.IO.File.Move(sourceFile, destinationFile, false);
+            }
+
+            return Ok();
         }
 
         public class ThumbnailRequest
@@ -300,7 +343,7 @@ namespace WebGallery.FileServer.Controllers
 
             return _rootPath;
         }
-        
+
         private async Task<string> GenerateVideoThumbnailAsync(string videoPath, string thumbnailPath, string seekTime = "00:00:01.000")
         {
             // Example: ffmpeg -y -ss 00:00:01 -i input.mp4 -frames:v 1 -q:v 2 output.jpg
@@ -328,6 +371,15 @@ namespace WebGallery.FileServer.Controllers
                 throw new Exception($"FFmpeg failed: {output}");
 
             return thumbnailPath;
+        }
+        
+        private static string HandleExistingFilename(string filename)
+        {
+            string namePart = Path.GetFileNameWithoutExtension(filename);
+            namePart += "_1";
+            string newFilename = namePart + Path.GetExtension(filename);
+
+            return newFilename;
         }
     }
 }
