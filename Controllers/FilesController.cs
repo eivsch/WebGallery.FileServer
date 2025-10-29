@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -201,29 +202,35 @@ namespace WebGallery.FileServer.Controllers
 
         public class MergeFoldersRequest
         {
-            public string SourceFolder { get; set; }
             public string TargetFolder { get; set; }
+            public List<string> SourceFolders { get; set; }
         }
 
         [HttpPost("merge-folders")]
         public IActionResult MergeFolders(MergeFoldersRequest request)
         {
             string userRootPath = ResolveUserRootPath();
-            string sourceFolder = Path.Combine(userRootPath, request.SourceFolder);
             string targetFolder = Path.Combine(userRootPath, request.TargetFolder);
 
             if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
-            foreach (string sourceFile in Directory.EnumerateFiles(sourceFolder))
-            {
-                string filename = Path.GetFileName(sourceFile);
-                string destinationFile = Path.Combine(targetFolder, filename);
-                if (System.IO.File.Exists(destinationFile))
-                {
-                    filename = HandleExistingFilename(filename);
-                    destinationFile = Path.Combine(targetFolder, filename);
-                }
 
-                System.IO.File.Move(sourceFile, destinationFile, false);
+            foreach (var sourceFolderName in request.SourceFolders)
+            {
+                string sourceFolder = Path.Combine(userRootPath, sourceFolderName);
+                if (!Directory.Exists(sourceFolder)) continue;
+
+                foreach (string sourceFile in Directory.EnumerateFiles(sourceFolder))
+                {
+                    string filename = Path.GetFileName(sourceFile);
+                    string destinationFile = Path.Combine(targetFolder, filename);
+                    if (System.IO.File.Exists(destinationFile))
+                    {
+                        filename = HandleExistingFilename(filename);
+                        destinationFile = Path.Combine(targetFolder, filename);
+                    }
+
+                    System.IO.File.Move(sourceFile, destinationFile, false);
+                }
             }
 
             return Ok();
