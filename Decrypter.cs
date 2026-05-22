@@ -46,6 +46,56 @@ namespace WebGallery.FileServer
             }
         }
 
+        public static async Task<FileStream> DecryptToFileStream(string filePath, string certName, string password = "")
+        {
+            var encryptLength = Encrypter.EncryptKey(Encoding.UTF8.GetBytes("string"), certName, password).Length;
+
+            await using var inputStream = new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                81920,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+            var encryptedKey = new byte[encryptLength];
+            var bytesRead = 0;
+            while (bytesRead < encryptLength)
+            {
+                var read = await inputStream.ReadAsync(encryptedKey.AsMemory(bytesRead, encryptLength - bytesRead));
+                if (read == 0)
+                    throw new EndOfStreamException("Unexpected end of encrypted file while reading the key header.");
+
+                bytesRead += read;
+            }
+
+            var decryptedKey = DecryptKey(encryptedKey, certName, password);
+
+            var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            var outputStream = new FileStream(
+                tempPath,
+                FileMode.CreateNew,
+                FileAccess.ReadWrite,
+                FileShare.Read,
+                81920,
+                FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+
+            using var aesKey = Aes.Create();
+            aesKey.Key = decryptedKey;
+            byte[] ivKey = new byte[aesKey.IV.Length];
+            Array.Copy(aesKey.Key, ivKey, aesKey.IV.Length);
+            aesKey.IV = ivKey;
+            var decryptor = aesKey.CreateDecryptor();
+
+            using (var decryptStream = new CryptoStream(outputStream, decryptor, CryptoStreamMode.Write, leaveOpen: true))
+                await inputStream.CopyToAsync(decryptStream);
+
+            await outputStream.FlushAsync();
+            outputStream.Position = 0;
+
+            return outputStream;
+        }
+
         private static byte[] DecryptKey(byte[] keyBytes, string certName, string password)
         {
             var cert = new X509Certificate2(certName);

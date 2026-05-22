@@ -71,18 +71,16 @@ namespace WebGallery.FileServer.Controllers
 
             var path = Path.Combine(userRootPath, appPath);
 
-            byte[] fileBytes;
             if (_useEncryption)
             {
-                using var decryptedFileStream = await Decrypter.Decrypt(path, _certPath);
-                fileBytes = decryptedFileStream.ToArray();
+                var decryptedFileStream = await Decrypter.DecryptToFileStream(path, _certPath);
+                return File(decryptedFileStream, "video/mp4");
             }
             else
             {
-                fileBytes = System.IO.File.ReadAllBytes(path);
+                var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                return File(fileStream, "video/mp4");
             }
-
-            return new FileContentResult(fileBytes, "video/mp4");
         }
 
         [DisableRequestSizeLimit]
