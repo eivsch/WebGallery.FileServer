@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -56,8 +57,6 @@ namespace WebGallery.FileServer.Controllers
                 fileBytes = System.IO.File.ReadAllBytes(path);
             }
 
-            //System.IO.File.WriteAllBytes("/home/eivind/out-srv.jpg", fileBytes);
-
             return new FileContentResult(fileBytes, "image/jpeg");
         }
 
@@ -66,8 +65,8 @@ namespace WebGallery.FileServer.Controllers
         {
             var userRootPath = ResolveUserRootPath();
 
-            var base64EncodedBytes = System.Convert.FromBase64String(file);
-            var appPath = System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            var base64EncodedBytes = Convert.FromBase64String(file);
+            var appPath = Encoding.UTF8.GetString(base64EncodedBytes);
             appPath = UnifyAppPath(appPath);
 
             var path = Path.Combine(userRootPath, appPath);
@@ -75,13 +74,20 @@ namespace WebGallery.FileServer.Controllers
             if (_useEncryption)
             {
                 var decryptedFileStream = await Decrypter.DecryptToFileStream(path, _certPath);
-                return File(decryptedFileStream, "video/mp4");
+
+                // Works only if decryptedFileStream is seekable and has a known length.
+                return File(decryptedFileStream, "video/mp4", enableRangeProcessing: true);
             }
-            else
-            {
-                var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
-                return File(fileStream, "video/mp4");
-            }
+
+            var fileStream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                81920,
+                FileOptions.Asynchronous);
+
+            return File(fileStream, "video/mp4", enableRangeProcessing: true);
         }
 
         [DisableRequestSizeLimit]
