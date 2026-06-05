@@ -223,6 +223,9 @@ namespace WebGallery.FileServer.Controllers
                 string sourceFolder = Path.Combine(userRootPath, sourceFolderName);
                 if (!Directory.Exists(sourceFolder)) continue;
 
+                if (string.Equals(sourceFolder, targetFolder, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 foreach (string sourceFile in Directory.EnumerateFiles(sourceFolder))
                 {
                     string filename = Path.GetFileName(sourceFile);
@@ -235,6 +238,8 @@ namespace WebGallery.FileServer.Controllers
 
                     System.IO.File.Move(sourceFile, destinationFile, false);
                 }
+
+                Directory.Delete(sourceFolder, true);
             }
 
             return Ok();
@@ -330,6 +335,36 @@ namespace WebGallery.FileServer.Controllers
             {
                 _logger.LogError(ex, "Failed to generate video image for {FilePath} at {SeekTime}", filePath, request.SeekTime);
                 return StatusCode(500, "Failed to generate video image.");
+            }
+        }
+
+        public record MoveFileRequest(string SourceFolder, string TargetFolder, string FileName);
+
+        [HttpPost("move")]
+        public async Task<IActionResult> MoveFile([FromBody] MoveFileRequest request)
+        {
+            if (request == null)
+                return BadRequest("Invalid request.");
+
+            var userRootPath = ResolveUserRootPath();
+            var sourcePath = Path.Combine(userRootPath, request.SourceFolder, request.FileName);
+            var destinationPath = Path.Combine(userRootPath, request.TargetFolder, request.FileName);
+
+            if (!System.IO.File.Exists(sourcePath))
+                return NotFound("Source file does not exist.");
+
+            try
+            {
+                if (!Directory.Exists(Path.Combine(userRootPath, request.TargetFolder)))
+                    Directory.CreateDirectory(Path.Combine(userRootPath, request.TargetFolder));
+
+                System.IO.File.Move(sourcePath, destinationPath);
+                return Ok(new { Message = "File moved successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to move file from {SourcePath} to {DestinationPath}", sourcePath, destinationPath);
+                return StatusCode(500, "Failed to move file.");
             }
         }
 
