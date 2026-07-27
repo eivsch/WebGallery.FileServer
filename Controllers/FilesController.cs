@@ -111,7 +111,7 @@ namespace WebGallery.FileServer.Controllers
                 // Override 'filePath' and 'filename' if a file with the same name already exists
                 if (System.IO.File.Exists(filePath))
                 {
-                    filename = HandleExistingFilename(filename);
+                    filename = HandleExistingFilename(dir, filename);
                     filePath = Path.Combine(dir, filename);
                 }
 
@@ -232,7 +232,7 @@ namespace WebGallery.FileServer.Controllers
                     string destinationFile = Path.Combine(targetFolder, filename);
                     if (System.IO.File.Exists(destinationFile))
                     {
-                        filename = HandleExistingFilename(filename);
+                        filename = HandleExistingFilename(targetFolder, filename);
                         destinationFile = Path.Combine(targetFolder, filename);
                     }
 
@@ -419,13 +419,21 @@ namespace WebGallery.FileServer.Controllers
             return thumbnailPath;
         }
         
-        private static string HandleExistingFilename(string filename)
+        private static string HandleExistingFilename(string directoryPath, string filename)
         {
             string namePart = Path.GetFileNameWithoutExtension(filename);
-            namePart += "_1";
-            string newFilename = namePart + Path.GetExtension(filename);
+            string extension = Path.GetExtension(filename);
 
-            return newFilename;
+            int count = 1;
+            string candidate;
+            do
+            {
+                candidate = $"{namePart}_{count}{extension}";
+                count++;
+            }
+            while (System.IO.File.Exists(Path.Combine(directoryPath, candidate)));
+
+            return candidate;
         }
     }
 }
