@@ -341,7 +341,7 @@ namespace WebGallery.FileServer.Controllers
         public record MoveFileRequest(string SourceFolder, string TargetFolder, string FileName);
 
         [HttpPost("move")]
-        public async Task<IActionResult> MoveFile([FromBody] MoveFileRequest request)
+        public IActionResult MoveFile([FromBody] MoveFileRequest request)
         {
             if (request == null)
                 return BadRequest("Invalid request.");
@@ -349,6 +349,7 @@ namespace WebGallery.FileServer.Controllers
             var userRootPath = ResolveUserRootPath();
             var sourcePath = Path.Combine(userRootPath, request.SourceFolder, request.FileName);
             var destinationPath = Path.Combine(userRootPath, request.TargetFolder, request.FileName);
+            var isVideo = Path.GetExtension(request.FileName).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
 
             if (!System.IO.File.Exists(sourcePath))
                 return NotFound("Source file does not exist.");
@@ -359,6 +360,23 @@ namespace WebGallery.FileServer.Controllers
                     Directory.CreateDirectory(Path.Combine(userRootPath, request.TargetFolder));
 
                 System.IO.File.Move(sourcePath, destinationPath);
+
+                if (isVideo)
+                {
+                    var thumbnailFileName = $"{Path.GetFileNameWithoutExtension(request.FileName)}.jpg";
+                    var sourceThumbnailPath = Path.Combine(userRootPath, request.SourceFolder, "thumbs", thumbnailFileName);
+                    var destinationThumbnailDirectory = Path.Combine(userRootPath, request.TargetFolder, "thumbs");
+                    var destinationThumbnailPath = Path.Combine(destinationThumbnailDirectory, thumbnailFileName);
+
+                    if (System.IO.File.Exists(sourceThumbnailPath))
+                    {
+                        if (!Directory.Exists(destinationThumbnailDirectory))
+                            Directory.CreateDirectory(destinationThumbnailDirectory);
+
+                        System.IO.File.Move(sourceThumbnailPath, destinationThumbnailPath);
+                    }
+                }
+
                 return Ok(new { Message = "File moved successfully." });
             }
             catch (Exception ex)
