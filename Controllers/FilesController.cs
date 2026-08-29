@@ -338,7 +338,7 @@ namespace WebGallery.FileServer.Controllers
             }
         }
 
-        public record MoveFileRequest(string SourceFolder, string TargetFolder, string FileName);
+        public record MoveFileRequest(string SourceFolder, string TargetFolder, string FileName, string NewFileName = null);
 
         [HttpPost("move")]
         public IActionResult MoveFile([FromBody] MoveFileRequest request)
@@ -347,8 +347,11 @@ namespace WebGallery.FileServer.Controllers
                 return BadRequest("Invalid request.");
 
             var userRootPath = ResolveUserRootPath();
+            var destinationFileName = string.IsNullOrWhiteSpace(request.NewFileName)
+                ? request.FileName
+                : request.NewFileName;
             var sourcePath = Path.Combine(userRootPath, request.SourceFolder, request.FileName);
-            var destinationPath = Path.Combine(userRootPath, request.TargetFolder, request.FileName);
+            var destinationPath = Path.Combine(userRootPath, request.TargetFolder, destinationFileName);
             var isVideo = Path.GetExtension(request.FileName).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
 
             if (!System.IO.File.Exists(sourcePath))
@@ -363,10 +366,11 @@ namespace WebGallery.FileServer.Controllers
 
                 if (isVideo)
                 {
-                    var thumbnailFileName = $"{Path.GetFileNameWithoutExtension(request.FileName)}.jpg";
-                    var sourceThumbnailPath = Path.Combine(userRootPath, request.SourceFolder, "thumbs", thumbnailFileName);
+                    var sourceThumbnailFileName = $"{Path.GetFileNameWithoutExtension(request.FileName)}.jpg";
+                    var destinationThumbnailFileName = $"{Path.GetFileNameWithoutExtension(destinationFileName)}.jpg";
+                    var sourceThumbnailPath = Path.Combine(userRootPath, request.SourceFolder, "thumbs", sourceThumbnailFileName);
                     var destinationThumbnailDirectory = Path.Combine(userRootPath, request.TargetFolder, "thumbs");
-                    var destinationThumbnailPath = Path.Combine(destinationThumbnailDirectory, thumbnailFileName);
+                    var destinationThumbnailPath = Path.Combine(destinationThumbnailDirectory, destinationThumbnailFileName);
 
                     if (System.IO.File.Exists(sourceThumbnailPath))
                     {
